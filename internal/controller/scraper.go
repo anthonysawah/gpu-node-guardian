@@ -20,14 +20,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/anthonysawah/gpu-cluster-toolkit/gpu-node-guardian/internal/dcgm"
+	"github.com/anthonysawah/gpu-node-guardian/internal/dcgm"
 )
 
+// Annotations the scraper writes onto each Node based on scraped metrics.
 const (
-	// How often to scrape DCGM. In production this would come from config.
-	scrapeInterval = 30 * time.Second
-
-	// Annotations we set on each node based on scraped metrics.
 	tempAnnotation       = "gpu.cluster.io/max-temp"
 	xidErrorsAnnotation  = "gpu.cluster.io/xid-errors"
 	lastScrapeAnnotation = "gpu.cluster.io/last-scrape"

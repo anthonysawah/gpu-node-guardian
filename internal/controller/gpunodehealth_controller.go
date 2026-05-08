@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/anthonysawah/gpu-cluster-toolkit/gpu-node-guardian/internal/dcgm"
+	"github.com/anthonysawah/gpu-node-guardian/internal/dcgm"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
@@ -143,7 +143,10 @@ func (r *GPUNodeHealthReconciler) uncordonNode(ctx context.Context, node *corev1
 // SetupWithManager registers the reconciler with the manager and tells it
 // to watch Node objects.
 func (r *GPUNodeHealthReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.Recorder = mgr.GetEventRecorderFor("gpu-node-guardian")
+	// TODO: migrate to mgr.GetEventRecorder (new client-go events API).
+	// The new API has a different Eventf signature; deferring until
+	// we add structured action/note fields to our events.
+	r.Recorder = mgr.GetEventRecorderFor("gpu-node-guardian") //nolint:staticcheck // SA1019: see TODO above
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
 		Named("gpunodehealth").

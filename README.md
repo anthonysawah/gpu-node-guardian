@@ -1,6 +1,15 @@
 # gpu-node-guardian
 
-A Kubernetes controller that watches Node objects, scrapes the NVIDIA DCGM exporter for per-node GPU health, and cordons nodes whose GPUs are throwing errors or running too hot. Auto-uncordons on recovery. Emits Kubernetes Events so operators can audit decisions.
+[![Lint](https://github.com/anthonysawah/gpu-node-guardian/actions/workflows/lint.yml/badge.svg)](https://github.com/anthonysawah/gpu-node-guardian/actions/workflows/lint.yml)
+[![Tests](https://github.com/anthonysawah/gpu-node-guardian/actions/workflows/test.yml/badge.svg)](https://github.com/anthonysawah/gpu-node-guardian/actions/workflows/test.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/anthonysawah/gpu-node-guardian.svg)](https://pkg.go.dev/github.com/anthonysawah/gpu-node-guardian)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
+> A Kubernetes controller that closes the loop between GPU health signals and the scheduler. When a GPU starts throwing XID errors or running too hot, the controller cordons the node automatically. When it recovers, the controller uncordons. No human in the loop, no training jobs landing on broken hardware.
+
+GPU clusters fail in ways generic Kubernetes nodes don't: ECC errors, NVLink degradation, NCCL hangs, thermal throttling, the occasional GPU that "falls off the bus." A single bad node can stall a thousand-GPU training run. Manual cordon-on-fault doesn't scale past a few hundred nodes. This is a small operator that automates the fault-to-cordon path using real DCGM telemetry.
+
+It scrapes the NVIDIA DCGM exporter for per-node GPU health, writes the summary as Node annotations, and the reconcile loop acts on it. Auto-uncordons on recovery. Emits Kubernetes Events so operators can audit every decision.
 
 ## What it does
 
@@ -130,6 +139,44 @@ kubectl get events --field-selector reason=NodeCordoned
 
 Reverting the value back to 0 triggers an automatic uncordon on the next scrape.
 
+### Sample output from a real run
+
+```
+INFO  setup           DCGM client configured           {"url": "http://localhost:9400/metrics"}
+INFO  setup           Starting manager
+INFO  dcgm-scraper   starting scrape loop              {"interval": "30s"}
+INFO  Starting EventSource                             {"controller": "gpunodehealth", "source": "kind source: *v1.Node"}
+DEBUG dcgm-scraper   scrape complete                   {"nodes": 2}
+INFO  Starting Controller                              {"controller": "gpunodehealth"}
+DEBUG reconcile                                        {"node": "gpu-toolkit-worker",  "errorCount": 0,  "unschedulable": false, "weCordoned": false}
+DEBUG reconcile                                        {"node": "gpu-toolkit-worker2", "errorCount": 0,  "unschedulable": false, "weCordoned": false}
+
+# fault injected via ConfigMap edit + pod restart
+
+DEBUG dcgm-scraper   scrape complete                   {"nodes": 2}
+DEBUG reconcile                                        {"node": "gpu-toolkit-worker",  "errorCount": 10, "unschedulable": false, "weCordoned": false}
+INFO  cordoned node due to GPU errors                  {"node": "gpu-toolkit-worker",  "errorCount": 10}
+DEBUG events          Cordoned due to GPU error count 10 (threshold 5)  {"reason": "NodeCordoned"}
+DEBUG reconcile                                        {"node": "gpu-toolkit-worker",  "errorCount": 10, "unschedulable": true,  "weCordoned": true}
+
+# fault reverted
+
+DEBUG dcgm-scraper   scrape complete                   {"nodes": 2}
+INFO  uncordoned node, errors recovered                {"node": "gpu-toolkit-worker",  "errorCount": 0}
+```
+
+```bash
+$ kubectl get nodes
+NAME                        STATUS                     ROLES           VERSION
+gpu-toolkit-control-plane   Ready                      control-plane   v1.35.0
+gpu-toolkit-worker          Ready,SchedulingDisabled   <none>          v1.35.0   # ← cordoned
+gpu-toolkit-worker2         Ready                      <none>          v1.35.0
+
+$ kubectl get events --field-selector reason=NodeCordoned
+LAST SEEN   TYPE      REASON         OBJECT                    MESSAGE
+52s         Warning   NodeCordoned   node/gpu-toolkit-worker   Cordoned due to GPU error count 10 (threshold 5)
+```
+
 ## Configuration
 
 | Setting | Source | Default |
@@ -163,6 +210,8 @@ Stragglers and noisy nodes are the silent killer in distributed GPU work, but th
 
 ## License
 
-Copyright 2026.
+Apache License 2.0. See [LICENSE](LICENSE).
 
-Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) (or upstream kubebuilder boilerplate in source files).
+---
+
+Built by [Anthony Sawah](https://github.com/anthonysawah) as part of an ongoing portfolio on GPU cluster reliability.

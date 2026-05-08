@@ -1,4 +1,4 @@
-module github.com/anthonysawah/gpu-cluster-toolkit/gpu-node-guardian
+module github.com/anthonysawah/gpu-node-guardian
 
 go 1.25.7
 

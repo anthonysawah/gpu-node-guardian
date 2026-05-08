@@ -30,7 +30,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/anthonysawah/gpu-cluster-toolkit/gpu-node-guardian/test/utils"
+	"github.com/anthonysawah/gpu-node-guardian/test/utils"
 )
 
 // namespace where the project is deployed in

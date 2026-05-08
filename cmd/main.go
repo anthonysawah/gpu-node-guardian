@@ -24,7 +24,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
-	"github.com/anthonysawah/gpu-cluster-toolkit/gpu-node-guardian/internal/dcgm"
+	"github.com/anthonysawah/gpu-node-guardian/internal/dcgm"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,7 +37,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/anthonysawah/gpu-cluster-toolkit/gpu-node-guardian/internal/controller"
+	"github.com/anthonysawah/gpu-node-guardian/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
 
