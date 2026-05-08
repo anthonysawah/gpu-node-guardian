@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gpu-monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dcgm-mock-metrics
+  namespace: gpu-monitoring
+data:
+  metrics: |
+    # HELP DCGM_FI_DEV_GPU_TEMP GPU temperature (in C).
+    # TYPE DCGM_FI_DEV_GPU_TEMP gauge
+    DCGM_FI_DEV_GPU_TEMP{gpu="0",UUID="GPU-mock-0",device="nvidia0",modelName="MOCK H100",Hostname="gpu-toolkit-worker"} 65
+    DCGM_FI_DEV_GPU_TEMP{gpu="0",UUID="GPU-mock-1",device="nvidia0",modelName="MOCK H100",Hostname="gpu-toolkit-worker2"} 62
+    # HELP DCGM_FI_DEV_XID_ERRORS Value of the last XID error encountered.
+    # TYPE DCGM_FI_DEV_XID_ERRORS gauge
+    DCGM_FI_DEV_XID_ERRORS{gpu="0",UUID="GPU-mock-0",device="nvidia0",modelName="MOCK H100",Hostname="gpu-toolkit-worker"} 0
+    DCGM_FI_DEV_XID_ERRORS{gpu="0",UUID="GPU-mock-1",device="nvidia0",modelName="MOCK H100",Hostname="gpu-toolkit-worker2"} 0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dcgm-mock-nginx-conf
+  namespace: gpu-monitoring
+data:
+  default.conf: |
+    server {
+      listen 9400;
+      location /metrics {
+        alias /usr/share/nginx/html/metrics;
+        default_type "text/plain; version=0.0.4; charset=utf-8";
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dcgm-mock
+  namespace: gpu-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dcgm-mock
+  template:
+    metadata:
+      labels:
+        app: dcgm-mock
+    spec:
+      containers:
+      - name: dcgm-mock
+        image: nginx:alpine
+        ports:
+        - containerPort: 9400
+          name: metrics
+        volumeMounts:
+        - name: metrics
+          mountPath: /usr/share/nginx/html
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+      volumes:
+      - name: metrics
+        configMap:
+          name: dcgm-mock-metrics
+      - name: nginx-conf
+        configMap:
+          name: dcgm-mock-nginx-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dcgm-exporter
+  namespace: gpu-monitoring
+spec:
+  selector:
+    app: dcgm-mock
+  ports:
+  - port: 9400
+    targetPort: 9400
+    name: metrics
