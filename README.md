@@ -5,7 +5,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/anthonysawah/gpu-node-guardian.svg)](https://pkg.go.dev/github.com/anthonysawah/gpu-node-guardian)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> A Kubernetes controller that closes the loop between GPU health signals and the scheduler. When a GPU starts throwing XID errors or running too hot, the controller cordons the node automatically. When it recovers, the controller uncordons. No human in the loop, no training jobs landing on broken hardware.
+> A Kubernetes controller that closes the loop between GPU health signals and the scheduler. When a node's GPU error count crosses a threshold, the controller cordons the node automatically. When it recovers, the controller uncordons. No human in the loop, no training jobs landing on broken hardware.
 
 GPU clusters fail in ways generic Kubernetes nodes don't: ECC errors, NVLink degradation, NCCL hangs, thermal throttling, the occasional GPU that "falls off the bus." A single bad node can stall a thousand-GPU training run. Manual cordon-on-fault doesn't scale past a few hundred nodes. This is a small operator that automates the fault-to-cordon path using real DCGM telemetry.
 
